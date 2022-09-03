@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "windows.h": "c",
+        "math.h": "c",
+        "resource.h": "c"
+    }
+}
