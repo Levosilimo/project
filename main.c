@@ -21,11 +21,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     POINT ptClientLR; // client area lower right corner  
 	static HDC hdcCompat; // handle to DC for bitmap  
     static POINT pt;      // x- and y-coordinates of cursor  
-    static RECT rcTarget; // rect to receive filled shape  
-    static RECT rcTarget2; // rect to receive filled shape 
+    static POINT pt2;      // x- and y-coordinates of cursor 
+    static RECT rcTarget; // rect to receive filled shape
     static RECT rcClient; // client area rectangle  
-    static BOOL fSizeСhordEllipse; // TRUE if ellipse is sized  
-    static BOOL fSizeСhord; // TRUE if ellipse is sized  
+    static BOOL fSizeChordEllipse; // TRUE if ellipse is sized  
+    static BOOL fSizeChord; // TRUE if ellipse is sized  
+    static BOOL fDrawChordEllipse;   // TRUE if ellipse is drawn 
     static BOOL fDrawChord;   // TRUE if ellipse is drawn  
     static BOOL fSizeEllipse; // TRUE if ellipse is sized  
     static BOOL fDrawEllipse;   // TRUE if ellipse is drawn  
@@ -57,9 +58,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (fDrawChord) 
             {
                 Chord(ps.hdc, rcTarget.left, rcTarget.top, 
-                    rcTarget.right, rcTarget.bottom,rcTarget2.left, rcTarget2.top, 
-                    rcTarget2.right, rcTarget2.bottom); 
-                fDrawEllipse = FALSE; 
+                    rcTarget.right, rcTarget.bottom,pt.x, pt.y, 
+                    pt2.x, pt2.y); 
+                fDrawChord = FALSE; 
                 rcTarget.left = rcTarget.right = 0; 
                 rcTarget.top = rcTarget.bottom = 0; 
             } 
@@ -85,6 +86,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					ReleaseDC(hwnd, hdc);
 					PostMessage(hwnd, WM_PAINT, 0, 0);
 					MessageBox(hwnd, "Chord randomized", "Done", MB_OK);
+				break;
+                case ID_CHORD_CREATE:
+					fSizeChordEllipse = TRUE;
 				break;
 				case ID_ELLIPSE_GENERATE:
 					fSizeEllipse = TRUE; 
@@ -144,6 +148,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             // shape is being sized.  
  
             if (fDrawEllipse) fSizeEllipse = TRUE; 
+            if (fDrawChord) fSizeChordEllipse = TRUE;
             return 0; 
  
         case WM_MOUSEMOVE: 
@@ -152,63 +157,66 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             // the target rectangle as the user drags  
             // the mouse.  
  
-            if ((wParam && MK_LBUTTON) && (fSizeEllipse || fSizeСhordEllipse || fSizeСhord)) 
-            {  
- 
+            if ((wParam && MK_LBUTTON)){
+                hdc = GetDC(hwnd); 
                 // Set the mixing mode so that the pen color is the  
                 // inverse of the background color. The previous  
                 // rectangle can then be erased by drawing  
                 // another rectangle on top of it.  
- 
-                hdc = GetDC(hwnd); 
                 SetROP2(hdc, R2_NOTXORPEN); 
- 
-                // If a previous target rectangle exists, erase  
-                // it by drawing another rectangle on top.  
- 
-                if (!IsRectEmpty(&rcTarget)) 
-                {
-                    Rectangle(hdc, rcTarget.left, rcTarget.top, 
-                        rcTarget.right, rcTarget.bottom); 
-                }
+                if(fSizeEllipse || fSizeChordEllipse){  
+                    
 
-                // Save the coordinates of the target rectangle.  
-                // Avoid invalid rectangles by ensuring that the  
-                // value of the left coordinate is greater than  
-                // that of the right, and that the value of the  
-                // bottom coordinate is greater than that of  
-                // the top.  
- 
-                if ((pt.x < (LONG) LOWORD(lParam)) && 
-                        (pt.y > (LONG) HIWORD(lParam))) 
-                {
-                    SetRect(&rcTarget, pt.x, HIWORD(lParam), 
-                        LOWORD(lParam), pt.y); 
-                } 
- 
-                else if ((pt.x > (LONG) LOWORD(lParam)) && 
-                        (pt.y > (LONG) HIWORD(lParam))) 
-                {
-                    SetRect(&rcTarget, LOWORD(lParam), 
-                        HIWORD(lParam), pt.x, pt.y); 
+                    // If a previous target rectangle exists, erase  
+                    // it by drawing another rectangle on top.  
+
+                    if (!IsRectEmpty(&rcTarget)) 
+                    {
+                        Ellipse(hdc, rcTarget.left, rcTarget.top, rcTarget.right, rcTarget.bottom); 
+                    }
+
+                    // Save the coordinates of the target rectangle.  
+                    // Avoid invalid rectangles by ensuring that the  
+                    // value of the left coordinate is greater than  
+                    // that of the right, and that the value of the  
+                    // bottom coordinate is greater than that of  
+                    // the top.  
+                    if ((pt.x < (LONG) LOWORD(lParam)) && 
+                            (pt.y > (LONG) HIWORD(lParam))) 
+                    {
+                        SetRect(&rcTarget, pt.x, HIWORD(lParam), 
+                            LOWORD(lParam), pt.y); 
+                    } 
+
+                    else if ((pt.x > (LONG) LOWORD(lParam)) && 
+                            (pt.y > (LONG) HIWORD(lParam))) 
+                    {
+                        SetRect(&rcTarget, LOWORD(lParam), 
+                            HIWORD(lParam), pt.x, pt.y); 
+                    }
+
+                    else if ((pt.x > (LONG) LOWORD(lParam)) && 
+                            (pt.y < (LONG) HIWORD(lParam))) 
+                    {
+                        SetRect(&rcTarget, LOWORD(lParam), pt.y, 
+                            pt.x, HIWORD(lParam)); 
+                    }
+                    else 
+                    {
+                        SetRect(&rcTarget, pt.x, pt.y, LOWORD(lParam), 
+                            HIWORD(lParam)); 
+                    }
+
+                    // Draw the new target rectangle.  
+
+                    Ellipse(hdc, rcTarget.left, rcTarget.top, rcTarget.right, rcTarget.bottom); 
                 }
- 
-                else if ((pt.x > (LONG) LOWORD(lParam)) && 
-                        (pt.y < (LONG) HIWORD(lParam))) 
-                {
-                    SetRect(&rcTarget, LOWORD(lParam), pt.y, 
-                        pt.x, HIWORD(lParam)); 
+                if(fSizeChord){
+                    pt2.x=LOWORD(lParam);
+                    pt2.y=HIWORD(lParam);
+                    MoveToEx(hdc, pt.x, pt.y, (LPPOINT) NULL); 
+                    LineTo(hdc,pt2.x,pt2.y);
                 }
-                else 
-                {
-                    SetRect(&rcTarget, pt.x, pt.y, LOWORD(lParam), 
-                        HIWORD(lParam)); 
-                }
- 
-                // Draw the new target rectangle.  
- 
-                Rectangle(hdc, rcTarget.left, rcTarget.top, 
-                    rcTarget.right, rcTarget.bottom); 
                 ReleaseDC(hwnd, hdc); 
             } 
             return 0; 
@@ -229,8 +237,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             { 
                 InvalidateRect(hwnd, &rcTarget, TRUE); 
                 UpdateWindow(hwnd); 
+            }
+            if (fSizeChord) 
+            { 
+                fSizeChord = FALSE; 
+                fDrawChord = TRUE; 
+            }
+            if (fDrawChord){
+                InvalidateRect(hwnd, &rcTarget, TRUE); 
+                UpdateWindow(hwnd);
             } 
- 
+            if (fSizeChordEllipse) 
+            { 
+                fSizeChordEllipse = FALSE; 
+                InvalidateRect(hwnd, &rcTarget, TRUE); 
+                fSizeChord = TRUE;
+            }
+
             // Release the cursor.  
  
             ClipCursor((LPRECT) NULL); 
