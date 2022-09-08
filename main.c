@@ -7,11 +7,15 @@
 
 const char g_szClassName[] = "myWindowClass";
 
+HMENU hMenu;
 HBITMAP hBitmap;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static HWND hwndPanel;
+    CHOOSECOLOR cc;
+    static COLORREF rgbCurrent = 0;  // current text color
+    static HWND hwndPanel;
+    static COLORREF acrCustClr[16];
     HDC hdc;
     PAINTSTRUCT ps;
     BITMAP bitmap;
@@ -28,15 +32,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     static BOOL fSizeChord; // TRUE if ellipse is sized  
     static BOOL fDrawChordEllipse;   // TRUE if ellipse is drawn 
     static BOOL fDrawChord;   // TRUE if ellipse is drawn  
+    static BOOL BrushTool = FALSE;   // TRUE if brush is activated
+    static BOOL EraserTool = FALSE;   // TRUE if brush is activated
     static BOOL fSizeEllipse; // TRUE if ellipse is sized  
     static BOOL fDrawEllipse;   // TRUE if ellipse is drawn  
     static int nEllipseWidth;   // width for round corners  
     static int nEllipseHeight;  // height for round corners  
+    static BOOL fDraw;   // TRUE if draw by mouse is active  
 	switch(msg)
 	{
 		case WM_CREATE:
 		{   
-			setMenu(hwnd);
+			hMenu = setMenu(hwnd);
 			setIcon(hwnd);
 			hBitmap = loadImage(hwnd);
 			HWND hImageView = CreateWindowEx(NULL, L"STATIC", NULL, SS_BITMAP | WS_VISIBLE | WS_CHILD, 0, 00, 500, 600, hwnd, (HMENU)hwnd, GetModuleHandle(NULL), NULL);
@@ -110,8 +117,37 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					PostMessage(hwnd, WM_PAINT, 0, 0);
 					MessageBox(hwnd, "Arc randomized", "Done", MB_OK);
 				break;
-			}
-		break;
+                case ID_TOOL_NONE:                                    
+                    CheckMenuRadioItem(hMenu,ID_TOOL_NONE, ID_TOOL_ERASER, ID_TOOL_NONE, MF_BYCOMMAND);
+                    EraserTool = FALSE;
+                    BrushTool = FALSE;
+                break;
+                case ID_TOOL_BRUSH:                                    
+                    CheckMenuRadioItem(hMenu,ID_TOOL_NONE, ID_TOOL_ERASER, ID_TOOL_BRUSH, MF_BYCOMMAND);
+                    EraserTool = FALSE;
+                    BrushTool = TRUE;
+                break;
+                case ID_TOOL_ERASER:                                    
+                    CheckMenuRadioItem(hMenu,ID_TOOL_NONE, ID_TOOL_ERASER, ID_TOOL_ERASER, MF_BYCOMMAND);
+                    BrushTool = FALSE;
+                    EraserTool = TRUE;
+                break;
+                case ID_COLOR_PALETTE:
+                    // Initialize CHOOSECOLOR 
+                    ZeroMemory(&cc, sizeof(cc));
+                    cc.lStructSize = sizeof(cc);
+                    cc.hwndOwner = hwnd;
+                    cc.lpCustColors = (LPDWORD) acrCustClr;
+                    cc.rgbResult = rgbCurrent;
+                    cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+                    
+                    if (ChooseColor(&cc)==TRUE) 
+                    {
+                        rgbCurrent = cc.rgbResult; 
+                    }
+                break;
+            }
+        break;
 		case WM_SIZE: 
  
             // Convert the client coordinates of the client area  
@@ -149,14 +185,30 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
  
             if (fDrawEllipse) fSizeEllipse = TRUE; 
             if (fDrawChord) fSizeChordEllipse = TRUE;
+            if (BrushTool || EraserTool) {
+                fDraw = TRUE;
+                return 0L; 
+            }
+            else fDraw = FALSE;
             return 0; 
  
         case WM_MOUSEMOVE: 
- 
+            if (fDraw) 
+            { 
+                hdc = GetDC(hwnd);
+                MoveToEx(hdc, pt.x, pt.y, NULL);
+                if(EraserTool) SetROP2(hdc, R2_WHITE);  
+                HPEN hPen = CreatePen(PS_DASHDOTDOT, 5, rgbCurrent);
+                SelectObject(hdc,hPen);
+	            LineTo(hdc, pt.x = LOWORD(lParam), pt.y = HIWORD(lParam)); 
+                pt.x = LOWORD(lParam);
+                pt.y = HIWORD(lParam);
+                ReleaseDC(hwnd, hdc); 
+            } 
             // If one of the "size" flags is set, draw  
             // the target rectangle as the user drags  
             // the mouse.  
- 
+
             if ((wParam && MK_LBUTTON)){
                 hdc = GetDC(hwnd); 
                 // Set the mixing mode so that the pen color is the  
@@ -227,6 +279,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             // and then set the corresponding "draw" flag. Invalidate  
             // the appropriate rectangle and issue a WM_PAINT message.  
  
+            if (fDraw) { 
+                hdc = GetDC(hwnd); 
+                MoveToEx(hdc, pt.x, pt.y, NULL); 
+                if(EraserTool) SelectObject(ps.hdc, GetStockObject(WHITE_BRUSH)); 
+                LineTo(hdc, LOWORD(lParam), HIWORD(lParam)); 
+                ReleaseDC(hwnd, hdc); 
+            } 
+            fDraw = FALSE; 
+
             if (fSizeEllipse) 
             { 
                 fSizeEllipse = FALSE; 

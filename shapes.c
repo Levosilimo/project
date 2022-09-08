@@ -4,6 +4,7 @@
 int pos[8];
 RECT rect;
 void generateChord(HDC hdc, HWND hwnd){
+	SetROP2(hdc, R2_NOTXORPEN);
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
 	HBRUSH hbrOld = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
@@ -19,16 +20,7 @@ void generateChord(HDC hdc, HWND hwnd){
 	Chord(hdc,pos[0],pos[1],pos[2],pos[3],pos[4],pos[5],pos[6],pos[7]);
 }
 void generateEllipse(HDC hdc, HWND hwnd){
-	GetWindowRect(hwnd, &rect);
-	HBRUSH hbrOld = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
-    srand(time(NULL));  
-	pos[2]=(int)(rand()%rect.right);
-	pos[3]=(int)(rand()%rect.bottom);
-	pos[0]=(int)(rand()%(pos[2]-(pos[2]/50)));
-	pos[1]=(int)(rand()%(pos[3]-(pos[3]/50)));
-	Ellipse(hdc,pos[0],pos[1],pos[2],pos[3]);
-}
-void createEllipse(HDC hdc, HWND hwnd){
+	SetROP2(hdc, R2_NOTXORPEN);
 	GetWindowRect(hwnd, &rect);
 	HBRUSH hbrOld = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
     srand(time(NULL));  
@@ -39,6 +31,7 @@ void createEllipse(HDC hdc, HWND hwnd){
 	Ellipse(hdc,pos[0],pos[1],pos[2],pos[3]);
 }
 void generateArc(HDC hdc, HWND hwnd){
+	SetROP2(hdc, R2_NOTXORPEN);
 	RECT rect;
 	GetWindowRect(hwnd, &rect);
 	HBRUSH hbrOld = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));

@@ -1,11 +1,12 @@
 #include <windows.h>
 #include "resource.h"
-void setMenu(HWND hwnd){
+HMENU setMenu(HWND hwnd){
     HMENU hMenu, hSubMenu, hChordSubMenu, hEllipseSubMenu, hArcSubMenu;
 
 	hMenu = CreateMenu();
     hSubMenu = CreatePopupMenu();
     AppendMenu(hSubMenu, MF_STRING, ID_FILE_EXIT, "E&xit");
+    AppendMenu(hSubMenu, MF_STRING, ID_FILE_OPEN, "&Open");
     AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&File");
 
     hSubMenu = CreatePopupMenu();
@@ -23,5 +24,14 @@ void setMenu(HWND hwnd){
     AppendMenu(hArcSubMenu, MF_STRING, ID_ARC_GENERATE, "&Generate an Arc");
     AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&Shapes");
 
+    hSubMenu = CreatePopupMenu();
+    AppendMenu(hSubMenu, MF_STRING | MF_ENABLED, ID_TOOL_NONE, "&None");
+    AppendMenu(hSubMenu, MF_STRING | MF_ENABLED, ID_TOOL_BRUSH, "&Brush");
+    AppendMenu(hSubMenu, MF_STRING | MF_ENABLED, ID_TOOL_ERASER, "&Eraser");
+    CheckMenuRadioItem(hMenu,ID_TOOL_NONE, ID_TOOL_ERASER, ID_TOOL_NONE, MF_BYCOMMAND);
+    AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&Tools");
+    AppendMenu(hMenu, MF_STRING, ID_COLOR_PALETTE, "&Palette");
+
     SetMenu(hwnd, hMenu);
+    return hMenu;
 }
