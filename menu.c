@@ -30,7 +30,8 @@ HMENU setMenu(HWND hwnd){
     AppendMenu(hSubMenu, MF_STRING | MF_ENABLED, ID_TOOL_ERASER, "&Eraser");
     CheckMenuRadioItem(hMenu,ID_TOOL_NONE, ID_TOOL_ERASER, ID_TOOL_NONE, MF_BYCOMMAND);
     AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&Tools");
-    AppendMenu(hMenu, MF_STRING, ID_COLOR_PALETTE, "&Palette");
+    AppendMenu(hMenu, MF_STRING, ID_BRUSH_PALETTE, "&Palette");
+    AppendMenu(hMenu, MF_STRING, ID_BRUSH_TRACKBAR, "&Brush Size");
 
     SetMenu(hwnd, hMenu);
     return hMenu;

@@ -1,14 +1,94 @@
 #include <windows.h>
 #include <stdio.h>
 #include "resource.h"
+#include <CommCtrl.h>
 #include "image.c"
 #include "shapes.c"
 #include "menu.c"
+#include "trackbar.c"
 
 const char g_szClassName[] = "myWindowClass";
 
 HMENU hMenu;
 HBITMAP hBitmap;
+HINSTANCE g_hinst; 
+
+HWND WINAPI CreateTrackbar( 
+    HWND hwndDlg,  // handle of dialog box (parent window) 
+    UINT iMin,     // minimum value in trackbar range 
+    UINT iMax,     // maximum value in trackbar range 
+    UINT iSelMin,  // minimum value in trackbar selection 
+    UINT iSelMax)  // maximum value in trackbar selection 
+{ 
+
+
+    HWND hwndTrack = CreateWindowEx( 
+        0,                               // no extended styles 
+        TRACKBAR_CLASS,                  // class name 
+        "Trackbar Control",              // title (caption) 
+        WS_CHILD | 
+        WS_VISIBLE | 
+        TBS_AUTOTICKS | 
+        TBS_ENABLESELRANGE,              // style 
+        10, 10,                          // position 
+        200, 30,                         // size 
+        hwndDlg,                         // parent window 
+        ID_BRUSH_TRACKBAR,                     // control identifier 
+        g_hinst,                         // instance 
+        NULL                             // no WM_CREATE parameter 
+        ); 
+
+    SendMessage(hwndTrack, TBM_SETRANGE, 
+        (WPARAM) TRUE,                   // redraw flag 
+        (LPARAM) MAKELONG(iMin, iMax));  // min. & max. positions
+        
+    SendMessage(hwndTrack, TBM_SETPAGESIZE, 
+        0, (LPARAM) 4);                  // new page size 
+
+    SendMessage(hwndTrack, TBM_SETSEL, 
+        (WPARAM) FALSE,                  // redraw flag 
+        (LPARAM) MAKELONG(iSelMin, iSelMax)); 
+        
+    SendMessage(hwndTrack, TBM_SETPOS, 
+        (WPARAM) TRUE,                   // redraw flag 
+        (LPARAM) iSelMin); 
+
+    SetFocus(hwndTrack); 
+
+    return hwndTrack; 
+} 
+
+VOID WINAPI TBNotifications( 
+    WPARAM wParam,  // wParam of WM_HSCROLL message 
+    HWND hwndTrack, // handle of trackbar window 
+    UINT iSelMin,   // minimum value of trackbar selection 
+    UINT iSelMax)   // maximum value of trackbar selection 
+    { 
+    DWORD dwPos;    // current position of slider 
+
+    switch (LOWORD(wParam)) { 
+    
+        case TB_ENDTRACK:
+          
+            dwPos = SendMessage(hwndTrack, TBM_GETPOS, 0, 0); 
+            
+            if (dwPos > iSelMax) 
+                SendMessage(hwndTrack, TBM_SETPOS, 
+                    (WPARAM) TRUE,       // redraw flag 
+                    (LPARAM) iSelMax); 
+                    
+            else if (dwPos < iSelMin) 
+                SendMessage(hwndTrack, TBM_SETPOS, 
+                    (WPARAM) TRUE,       // redraw flag 
+                    (LPARAM) iSelMin); 
+            
+            break; 
+
+        default: 
+        
+            break; 
+        } 
+} 
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -16,6 +96,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     static COLORREF rgbCurrent = 0;  // current text color
     static HWND hwndPanel;
     static COLORREF acrCustClr[16];
+    HWND trackbar;
     HDC hdc;
     PAINTSTRUCT ps;
     BITMAP bitmap;
@@ -132,7 +213,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     BrushTool = FALSE;
                     EraserTool = TRUE;
                 break;
-                case ID_COLOR_PALETTE:
+                case ID_BRUSH_PALETTE:
                     // Initialize CHOOSECOLOR 
                     ZeroMemory(&cc, sizeof(cc));
                     cc.lStructSize = sizeof(cc);
@@ -145,6 +226,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     {
                         rgbCurrent = cc.rgbResult; 
                     }
+                break;
+                case ID_BRUSH_TRACKBAR:
+                    trackbar = CreateTrackbar(hwnd,1,20,3,6);
+                    ShowWindow(trackbar, SW_SHOW);
+
                 break;
             }
         break;
@@ -328,6 +414,29 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			DeleteObject(hBitmap);
             PostQuitMessage(0);
 		break;
+        case WM_HSCROLL:
+        {
+            TBNotifications(wParam,trackbar,3,6);
+            if (trackbar == (HWND)lParam)
+            {
+                int newPos    = SendMessage(trackbar, TBM_GETPOS, 0, 0);
+                int selStart  = SendMessage(trackbar, TBM_GETSELSTART, 0, 0);
+                int selEnd    = SendMessage(trackbar, TBM_GETSELEND, 0, 0);
+                
+                if (newPos > selEnd)
+                {
+                    SendMessage(trackbar, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)selEnd);
+                }
+                
+                else if (newPos < selStart)
+                {
+                    SendMessage(trackbar, TBM_SETPOS, (WPARAM)TRUE, (LPARAM)selStart);
+                }
+            }
+        
+            break;
+        }
+        
 		default:
 			return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
